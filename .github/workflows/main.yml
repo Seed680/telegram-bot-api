@@ -1,0 +1,63 @@
+name: Build Linux x86_64 and ARM64
+
+on:
+  push:
+    branches: [master]
+  pull_request:
+    branches: [master]
+  workflow_dispatch:
+
+jobs:
+  build-x86_64:
+    name: Build for Linux x86_64
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+        with:
+          submodules: recursive
+
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y cmake g++ make
+
+      - name: Build x86_64
+        run: |
+          mkdir -p build
+          cd build
+          cmake -DCMAKE_BUILD_TYPE=Release ..
+          cmake --build . --target install
+
+      - name: Archive artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: telegram-bot-api-x86_64
+          path: build/telegram-bot-api
+
+  build-arm64:
+    name: Build for Linux ARM64 (aarch64)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+        with:
+          submodules: recursive
+
+      - name: Install cross-compilation dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y cmake g++ make gcc-aarch64-linux-gnu g++-aarch64-linux-gnu
+
+      - name: Build ARM64 (aarch64)
+        run: |
+          mkdir -p build
+          cd build
+          cmake -DCMAKE_BUILD_TYPE=Release -DCMAKE_C_COMPILER=aarch64-linux-gnu-gcc -DCMAKE_CXX_COMPILER=aarch64-linux-gnu-g++ ..
+          cmake --build . --target install
+
+      - name: Archive artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: telegram-bot-api-arm64
+          path: build/telegram-bot-api
