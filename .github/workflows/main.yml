@@ -37,34 +37,23 @@ jobs:
 
   build-arm64:
     name: Build for Linux ARM64 (aarch64)
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04-arm64
     steps:
       - name: Checkout repository
         uses: actions/checkout@v3
         with:
           submodules: recursive
 
-      - name: Install cross-compilation dependencies
+      - name: Install dependencies
         run: |
-          sudo dpkg --add-architecture arm64
           sudo apt-get update
-          sudo apt-get install -y cmake g++ make gperf gcc-aarch64-linux-gnu g++-aarch64-linux-gnu \
-            libssl-dev zlib1g-dev zlib1g-dev:arm64
+          sudo apt-get install -y cmake g++ make gperf libssl-dev zlib1g-dev
 
-      - name: Build ARM64 (aarch64)
+      - name: Build ARM64
         run: |
           mkdir -p build
           cd build
-          cmake -DCMAKE_BUILD_TYPE=Release \
-            -DCMAKE_C_COMPILER=aarch64-linux-gnu-gcc \
-            -DCMAKE_CXX_COMPILER=aarch64-linux-gnu-g++ \
-            -DCMAKE_FIND_ROOT_PATH=/usr/aarch64-linux-gnu \
-            -DCMAKE_FIND_ROOT_PATH_MODE_LIBRARY=ONLY \
-            -DCMAKE_FIND_ROOT_PATH_MODE_INCLUDE=ONLY \
-            -DZLIB_INCLUDE_DIR=/usr/aarch64-linux-gnu/include \
-            -DZLIB_LIBRARY=/usr/aarch64-linux-gnu/lib/aarch64-linux-gnu/libz.so \
-            ..
-          
+          cmake -DCMAKE_BUILD_TYPE=Release ..
           cmake --build . --target install
 
       - name: Archive artifacts
