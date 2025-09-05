@@ -66,7 +66,7 @@ jobs:
         run: |
           cd build-native
           cmake -DCMAKE_BUILD_TYPE=Release ..
-          cmake --build . --target preparecrosscompiling
+          cmake --build . --target prepare_cross_compiling
       
       - name: Add ARM64 architecture and manually configure sources
         run: |
