@@ -60,7 +60,7 @@ jobs:
             -DZLIB_INCLUDE_DIR=/usr/aarch64-linux-gnu/include \
             -DOPENSSL_ROOT_DIR=/usr/aarch64-linux-gnu \
             -DOPENSSL_INCLUDE_DIR=/usr/aarch64-linux-gnu/include \
-            -DOPENSSL_LIBRARIES=/usr/aarch64-linux-gnu/lib
+            -DOPENSSL_LIBRARIES=/usr/aarch64-linux-gnu/lib \
             ..
           cmake --build . --target install
 
