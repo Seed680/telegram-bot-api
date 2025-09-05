@@ -99,21 +99,20 @@ jobs:
           
       - name: Run CMake for cross-compilation
         run: |
-          cd build
-          # 设置 LIBRARY_PATH 确保链接器能找到 ARM64 的库
-          export LIBRARY_PATH=/usr/lib/aarch64-linux-gnu:$LIBRARY_PATH
-      
-          # 运行 CMake 配置，指定交叉编译器
-          cmake \
-            -DCMAKE_BUILD_TYPE=Release \
-            -DCMAKE_SYSTEM_NAME=Linux \
-            -DCMAKE_CROSSCOMPILING=True \
-            -DCMAKE_C_COMPILER=aarch64-linux-gnu-gcc \
-            -DCMAKE_CXX_COMPILER=aarch64-linux-gnu-g++ \
-            ..
-        
-          # 开始编译
-          cmake --build .
+         cd build
+         # 运行 CMake 配置，使用 CMAKE_PREFIX_PATH 指定 ARM64 库的根路径
+         cmake \
+         -DCMAKE_BUILD_TYPE=Release \
+         -DCMAKE_SYSTEM_NAME=Linux \
+         -DCMAKE_CROSSCOMPILING=True \
+         -DCMAKE_C_COMPILER=aarch64-linux-gnu-gcc \
+         -DCMAKE_CXX_COMPILER=aarch64-linux-gnu-g++ \
+         # 关键修改：告诉 CMake 去 /usr/lib/aarch64-linux-gnu 查找库和头文件
+         -DCMAKE_PREFIX_PATH=/usr/lib/aarch64-linux-gnu \
+         ..
+         # 开始编译
+         cmake --build .
+
 
       - name: Archive artifacts
         uses: actions/upload-artifact@v4
