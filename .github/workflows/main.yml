@@ -37,7 +37,7 @@ jobs:
 
   build-arm64:
     name: Build for Linux ARM64 (aarch64)
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     steps:
       - name: Checkout repository
         uses: actions/checkout@v3
