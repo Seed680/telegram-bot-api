@@ -87,8 +87,8 @@ jobs:
           INNER_EOF
 
           # 使用 sudo 将临时文件移动到 /etc/apt/sources.list.d/ 目录
-          # 这会创建或覆盖 ubuntu-arm64.sources 文件
-          sudo mv /tmp/ubuntu-arm64.sources /etc/apt/sources.list.d/ubuntu-arm64.sources
+          # 这会创建或覆盖 ubuntu.sources 文件
+          sudo mv /tmp/ubuntu-arm64.sources /etc/apt/sources.list.d/ubuntu.sources
           # --- 源添加完毕 ---
       - name: Update package list and install target (ARM64) dependencies
         run: |
