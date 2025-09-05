@@ -48,9 +48,28 @@ jobs:
         run: |
           sudo dpkg --add-architecture arm64
           sudo apt-get update
-          sudo apt-get install -y cmake g++ make gperf gcc-aarch64-linux-gnu g++-aarch64-linux-gnu \
-            libssl-dev zlib1g-dev libz-dev:arm64
-
+      
+          # 安装主机环境和交叉编译工具
+          sudo apt-get install -y \
+            cmake g++ make gperf gcc-aarch64-linux-gnu g++-aarch64-linux-gnu \
+            libssl-dev
+      
+          # 构建依赖和源码包
+          sudo apt-get build-dep -y zlib1g
+          apt source zlib1g
+          cd zlib1g-*
+          
+          # 交叉编译并安装 zlib 到指定交叉根路径
+          ./configure \
+            --prefix=/usr/aarch64-linux-gnu \
+            --libdir=/usr/aarch64-linux-gnu/lib \
+            --includedir=/usr/aarch64-linux-gnu/include \
+            --shared \
+            --static \
+            --cross-prefix=aarch64-linux-gnu-
+          make -j$(nproc)
+          sudo make install
+      
       - name: Build ARM64 (aarch64)
         run: |
           mkdir -p build
@@ -62,10 +81,11 @@ jobs:
             -DCMAKE_FIND_ROOT_PATH_MODE_LIBRARY=ONLY \
             -DCMAKE_FIND_ROOT_PATH_MODE_INCLUDE=ONLY \
             -DZLIB_INCLUDE_DIR=/usr/aarch64-linux-gnu/include \
-            -DZLIB_LIBRARY=/usr/aarch64-linux-gnu/lib/aarch64-linux-gnu/libz.so \
+            -DZLIB_LIBRARY=/usr/aarch64-linux-gnu/lib/libz.so \
             ..
           
           cmake --build . --target install
+
 
       - name: Archive artifacts
         uses: actions/upload-artifact@v4
