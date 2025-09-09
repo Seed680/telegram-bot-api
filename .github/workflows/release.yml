@@ -13,26 +13,17 @@ jobs:
   setup-release-info:
     name: Setup Release Info
     runs-on: ubuntu-latest
-    container: debian:10
     outputs:
       release-version: ${{ steps.version.outputs.version }}
       release-tag-name: ${{ steps.tag.outputs.tag-name }}
       release-title: ${{ steps.title.outputs.title }}
       is-prerelease: ${{ steps.prerelease.outputs.prerelease }}
     steps:
-      - name: Install Git
-        run: |
-          apt update
-          apt install -y git ca-certificates
-          git --version
-          
       - name: Checkout repository
         uses: actions/checkout@v3
-
       - name: Extract version from CMakeLists.txt
         id: version
         run: echo "version=$(grep -oP 'project\(TelegramBotApi VERSION \K[\d.]+' CMakeLists.txt)" >> $GITHUB_OUTPUT
-
       - name: Determine Tag Name
         id: tag
         run: |
@@ -57,130 +48,85 @@ jobs:
           else
             echo "prerelease=true" >> $GITHUB_OUTPUT
           fi
+---
   build-x86_64:
-    name: Build for Linux x86_64
+    name: Build for Linux x86_64 (Alpine Static)
     runs-on: ubuntu-latest
-    container: debian:10
+    container: alpine:latest
     steps:
-      - name: Install Git
+      - name: Install build essentials for Alpine
         run: |
-          apt-get update
-          apt-get install -y git ca-certificates
-          git --version
+          apk update
+          apk add --no-cache \
+            build-base \
+            cmake \
+            gperf \
+            zlib-static \
+            openssl-static
       - name: Checkout repository
         uses: actions/checkout@v3
         with:
           submodules: recursive
-
-      - name: Install dependencies
-        run: |
-          sudo apt update
-          sudo apt install -y cmake g++ make gperf zlib1g-dev libssl-dev
       - name: Build x86_64
         run: |
           mkdir -p build
           cd build
-          cmake -DCMAKE_BUILD_TYPE=Release ..
+          cmake -DCMAKE_BUILD_TYPE=Release \
+                -DCMAKE_C_FLAGS=-static \
+                -DCMAKE_CXX_FLAGS=-static \
+                ..
           cmake --build . --target install
       - name: Rename artifact
         run: mv build/telegram-bot-api build/telegram-bot-api-linux-x86_64
-
       - name: Archive artifacts
         uses: actions/upload-artifact@v4
         with:
           name: telegram-bot-api-x86_64
           path: build/telegram-bot-api-linux-x86_64
-
+---
   build-arm64:
-    name: Build for Linux ARM64
+    name: Build for Linux ARM64 (Alpine Static)
     runs-on: ubuntu-latest
-    container: debian:10
+    container: alpine:latest
     steps:
-      - name: Install Git
+      - name: Install dependencies for Alpine on ARM64
         run: |
-          apt-get update
-          apt-get install -y git ca-certificates
-          git --version
+          apk update
+          apk add --no-cache \
+            build-base \
+            cmake \
+            gperf \
+            zlib-static \
+            openssl-static \
+            binutils-aarch64-linux-gnu \
+            musl-dev
       - name: Checkout repository
         uses: actions/checkout@v3
         with:
           submodules: recursive
-
-      - name: Install cross-compilation dependencies
-        run: |
-          sudo apt update
-          sudo apt install -y \
-          build-essential \
-          cmake \
-          gcc-aarch64-linux-gnu \
-          g++-aarch64-linux-gnu \
-          git \
-          gperf \
-          zlib1g-dev \
-          libssl-dev
-      - name: Create build directories
-        run: |
-          mkdir -p build
-          mkdir -p build-native
-      
-      - name: Prepare for cross-compilation (if needed)
-        run: |
-          cd build-native
-          cmake -DCMAKE_BUILD_TYPE=Release ..
-          cmake --build . --target prepare_cross_compiling
-      
-      - name: Add ARM64 architecture and manually configure sources
-        run: |
-          # 添加 arm64 架构
-          sudo dpkg --add-architecture arm64
-      
-          # 手动创建 ARM64 源文件，完全复制 Dockerfile 的操作
-          # 使用 tee 命令和 sudo 来写入受保护的系统目录
-          # --- 新的、更稳健的添加源的方法 ---
-          # 将 ARM64 源的内容写入一个临时文件
-          #cat > /tmp/ubuntu-arm64.sources << 'INNER_EOF'
-          #Types: deb
-          #URIs: http://ports.ubuntu.com/ubuntu-ports/
-          #Suites: jammy jammy-updates jammy-backports jammy-security
-          #Components: main universe restricted multiverse
-          #Architectures: arm64
-          #Signed-By: /usr/share/keyrings/ubuntu-archive-keyring.gpg
-          #INNER_EOF
-
-          # 使用 sudo 将临时文件移动到 /etc/apt/sources.list.d/ 目录
-          # 这会创建或覆盖 ubuntu.sources 文件
-          #sudo mv /tmp/ubuntu-arm64.sources /etc/apt/sources.list.d/ubuntu.sources
-          # --- 源添加完毕 ---
-      
-      - name: Update package list and install target (ARM64) dependencies
-        run: |
-          sudo apt update
-          sudo apt install -y \
-          zlib1g-dev:arm64 \
-          libssl-dev:arm64
       - name: Build ARM64
         run: |
-         cd build
-         # 运行 CMake 配置，使用 CMAKE_PREFIX_PATH 指定 ARM64 库的根路径
-         cmake \
-         -DCMAKE_BUILD_TYPE=Release \
-         -DCMAKE_SYSTEM_NAME=Linux \
-         -DCMAKE_CROSSCOMPILING=True \
-         -DCMAKE_C_COMPILER=aarch64-linux-gnu-gcc \
-         -DCMAKE_CXX_COMPILER=aarch64-linux-gnu-g++ \
-         -DCMAKE_PREFIX_PATH=/usr/lib/aarch64-linux-gnu \
-         ..
-         # 开始编译
-         cmake --build .
+          mkdir -p build
+          cd build
+          cmake \
+            -DCMAKE_BUILD_TYPE=Release \
+            -DCMAKE_SYSTEM_NAME=Linux \
+            -DCMAKE_CROSSCOMPILING=True \
+            -DCMAKE_C_COMPILER=aarch64-linux-gnu-gcc \
+            -DCMAKE_CXX_COMPILER=aarch64-linux-gnu-g++ \
+            -DCMAKE_C_FLAGS="-static" \
+            -DCMAKE_CXX_FLAGS="-static" \
+            -DCMAKE_PREFIX_PATH=/usr/lib/aarch64-linux-gnu \
+            ..
+          cmake --build .
       - name: Rename artifact
         run: mv build/telegram-bot-api build/telegram-bot-api-linux-arm64
-
       - name: Archive artifacts
         uses: actions/upload-artifact@v4
         with:
           name: telegram-bot-api-arm64
           path: build/telegram-bot-api-linux-arm64
-
+---
   create-release:
     name: Create Release
     needs: [setup-release-info, build-x86_64, build-arm64]
@@ -189,7 +135,6 @@ jobs:
     steps:
       - name: Download all artifacts
         uses: actions/download-artifact@v4
-
       - name: Create Release
         uses: softprops/action-gh-release@v2
         with:
