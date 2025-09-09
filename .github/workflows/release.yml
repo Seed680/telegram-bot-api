@@ -63,11 +63,12 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install -y cmake g++ make gperf zlib1g-dev libssl-dev
+          sudo apt install musl musl-dev musl-tools
       - name: Build x86_64
         run: |
-          mkdir -p build
+          mkdir build
           cd build
-          cmake -DCMAKE_BUILD_TYPE=Release ..
+          CC=musl-gcc cmake -DCMAKE_BUILD_TYPE=Release ..
           cmake --build . --target install
       - name: Rename artifact
         run: mv build/telegram-bot-api build/telegram-bot-api-linux-x86_64
