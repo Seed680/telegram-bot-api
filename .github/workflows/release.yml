@@ -122,7 +122,7 @@ jobs:
           cat > /tmp/ubuntu-arm64.sources << 'INNER_EOF'
           Types: deb
           URIs: http://ports.ubuntu.com/ubuntu-ports/
-          Suites: noble noble-updates noble-backports noble-security
+          Suites: jammy jammy-updates jammy-backports jammy-security
           Components: main universe restricted multiverse
           Architectures: arm64
           Signed-By: /usr/share/keyrings/ubuntu-archive-keyring.gpg
