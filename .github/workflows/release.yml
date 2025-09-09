@@ -52,7 +52,7 @@ jobs:
           fi
   build-x86_64:
     name: Build for Linux x86_64
-    runs-on: ubuntu-latest
+    runs-on: ubuntu:22.04
     steps:
       - name: Checkout repository
         uses: actions/checkout@v3
@@ -63,12 +63,11 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install -y cmake g++ make gperf zlib1g-dev libssl-dev
-          sudo apt install musl musl-dev musl-tools
       - name: Build x86_64
         run: |
-          mkdir build
+          mkdir -p build
           cd build
-          CC=musl-gcc cmake -DCMAKE_BUILD_TYPE=Release ..
+          cmake -DCMAKE_BUILD_TYPE=Release ..
           cmake --build . --target install
       - name: Rename artifact
         run: mv build/telegram-bot-api build/telegram-bot-api-linux-x86_64
@@ -81,7 +80,7 @@ jobs:
 
   build-arm64:
     name: Build for Linux ARM64
-    runs-on: ubuntu-latest
+    runs-on: ubuntu:22.04
     steps:
       - name: Checkout repository
         uses: actions/checkout@v3
