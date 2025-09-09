@@ -20,6 +20,12 @@ jobs:
       release-title: ${{ steps.title.outputs.title }}
       is-prerelease: ${{ steps.prerelease.outputs.prerelease }}
     steps:
+      - name: Install Git
+        run: |
+          apt update
+          apt install -y git ca-certificates
+          git --version
+          
       - name: Checkout repository
         uses: actions/checkout@v3
 
@@ -56,6 +62,11 @@ jobs:
     runs-on: ubuntu-latest
     container: debian:10
     steps:
+      - name: Install Git
+        run: |
+          apt-get update
+          apt-get install -y git ca-certificates
+          git --version
       - name: Checkout repository
         uses: actions/checkout@v3
         with:
@@ -85,6 +96,11 @@ jobs:
     runs-on: ubuntu-latest
     container: debian:10
     steps:
+      - name: Install Git
+        run: |
+          apt-get update
+          apt-get install -y git ca-certificates
+          git --version
       - name: Checkout repository
         uses: actions/checkout@v3
         with:
