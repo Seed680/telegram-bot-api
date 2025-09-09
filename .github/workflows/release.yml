@@ -13,6 +13,7 @@ jobs:
   setup-release-info:
     name: Setup Release Info
     runs-on: ubuntu-latest
+    container: debian:10
     outputs:
       release-version: ${{ steps.version.outputs.version }}
       release-tag-name: ${{ steps.tag.outputs.tag-name }}
@@ -52,7 +53,8 @@ jobs:
           fi
   build-x86_64:
     name: Build for Linux x86_64
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-latest
+    container: debian:10
     steps:
       - name: Checkout repository
         uses: actions/checkout@v3
@@ -61,8 +63,8 @@ jobs:
 
       - name: Install dependencies
         run: |
-          sudo apt-get update
-          sudo apt-get install -y cmake g++ make gperf zlib1g-dev libssl-dev
+          sudo apt update
+          sudo apt install -y cmake g++ make gperf zlib1g-dev libssl-dev
       - name: Build x86_64
         run: |
           mkdir -p build
@@ -80,7 +82,8 @@ jobs:
 
   build-arm64:
     name: Build for Linux ARM64
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-latest
+    container: debian:10
     steps:
       - name: Checkout repository
         uses: actions/checkout@v3
@@ -119,18 +122,18 @@ jobs:
           # 使用 tee 命令和 sudo 来写入受保护的系统目录
           # --- 新的、更稳健的添加源的方法 ---
           # 将 ARM64 源的内容写入一个临时文件
-          cat > /tmp/ubuntu-arm64.sources << 'INNER_EOF'
-          Types: deb
-          URIs: http://ports.ubuntu.com/ubuntu-ports/
-          Suites: jammy jammy-updates jammy-backports jammy-security
-          Components: main universe restricted multiverse
-          Architectures: arm64
-          Signed-By: /usr/share/keyrings/ubuntu-archive-keyring.gpg
-          INNER_EOF
+          #cat > /tmp/ubuntu-arm64.sources << 'INNER_EOF'
+          #Types: deb
+          #URIs: http://ports.ubuntu.com/ubuntu-ports/
+          #Suites: jammy jammy-updates jammy-backports jammy-security
+          #Components: main universe restricted multiverse
+          #Architectures: arm64
+          #Signed-By: /usr/share/keyrings/ubuntu-archive-keyring.gpg
+          #INNER_EOF
 
           # 使用 sudo 将临时文件移动到 /etc/apt/sources.list.d/ 目录
           # 这会创建或覆盖 ubuntu.sources 文件
-          sudo mv /tmp/ubuntu-arm64.sources /etc/apt/sources.list.d/ubuntu.sources
+          #sudo mv /tmp/ubuntu-arm64.sources /etc/apt/sources.list.d/ubuntu.sources
           # --- 源添加完毕 ---
       
       - name: Update package list and install target (ARM64) dependencies
