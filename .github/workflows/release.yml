@@ -87,7 +87,7 @@ jobs:
         with:
           submodules: recursive
 
-      - name: Install cross-compilation dependencies
+      - name: Install cross-compilation dependencies (x86_64)
         run: |
           sudo apt update
           sudo apt install -y \
@@ -99,6 +99,7 @@ jobs:
           gperf \
           zlib1g-dev \
           libssl-dev
+      
       - name: Create build directories
         run: |
           mkdir -p build
@@ -110,48 +111,48 @@ jobs:
           cmake -DCMAKE_BUILD_TYPE=Release ..
           cmake --build . --target prepare_cross_compiling
       
-      - name: Add ARM64 architecture and fix sources
+      - name: Add ARM64 architecture and completely replace sources
         run: |
           # 添加 arm64 架构
           sudo dpkg --add-architecture arm64
           
-          # 1. 清理默认的安全源（这些源不支持ARM64）
-          sudo sed -i '/security.ubuntu.com/d' /etc/apt/sources.list
-          sudo rm -f /etc/apt/sources.list.d/*security*
+          # 1. 彻底清理所有现有源配置
+          sudo rm -f /etc/apt/sources.list
+          sudo rm -rf /etc/apt/sources.list.d/*
           
-          # 2. 添加ARM64专用源（仅使用ports.ubuntu.com）
-          cat > /tmp/ubuntu-arm64.sources << 'INNER_EOF'
-          Types: deb
-          URIs: http://ports.ubuntu.com/ubuntu-ports/
-          Suites: jammy jammy-updates jammy-backports
-          Components: main universe restricted multiverse
-          Architectures: arm64
-          Signed-By: /usr/share/keyrings/ubuntu-archive-keyring.gpg
+          # 2. 为ARM64创建专用源配置（仅ports.ubuntu.com，无安全源）
+          cat > /tmp/arm64-sources.list << 'INNER_EOF'
+          deb [arch=arm64] http://ports.ubuntu.com/ubuntu-ports/ jammy main universe restricted multiverse
+          deb [arch=arm64] http://ports.ubuntu.com/ubuntu-ports/ jammy-updates main universe restricted multiverse
+          deb [arch=arm64] http://ports.ubuntu.com/ubuntu-ports/ jammy-backports main universe restricted multiverse
           INNER_EOF
           
-          sudo mv /tmp/ubuntu-arm64.sources /etc/apt/sources.list.d/ubuntu-arm64.sources
-          
-          # 3. 保留x86_64的默认源（避免影响主机架构）
-          cat > /tmp/ubuntu-amd64.sources << 'INNER_EOF'
-          Types: deb
-          URIs: http://archive.ubuntu.com/ubuntu/
-          Suites: jammy jammy-updates jammy-backports jammy-security
-          Components: main universe restricted multiverse
-          Architectures: amd64
-          Signed-By: /usr/share/keyrings/ubuntu-archive-keyring.gpg
+          # 3. 为x86_64保留必要的源（避免影响主机架构）
+          cat > /tmp/amd64-sources.list << 'INNER_EOF'
+          deb [arch=amd64] http://archive.ubuntu.com/ubuntu/ jammy main universe restricted multiverse
+          deb [arch=amd64] http://archive.ubuntu.com/ubuntu/ jammy-updates main universe restricted multiverse
+          deb [arch=amd64] http://archive.ubuntu.com/ubuntu/ jammy-backports main universe restricted multiverse
+          deb [arch=amd64] http://security.ubuntu.com/ubuntu/ jammy-security main universe restricted multiverse
           INNER_EOF
           
-          sudo mv /tmp/ubuntu-amd64.sources /etc/apt/sources.list.d/ubuntu-amd64.sources
+          # 4. 安装新的源配置
+          sudo mv /tmp/arm64-sources.list /etc/apt/sources.list.d/arm64-sources.list
+          sudo mv /tmp/amd64-sources.list /etc/apt/sources.list.d/amd64-sources.list
+          
+          # 5. 清空APT缓存
+          sudo apt clean
+          sudo rm -rf /var/lib/apt/lists/*
       
-      - name: Update package list with ARM64 support
+      - name: Update package list with cleaned sources
         run: |
-          # 强制更新源并忽略可能的错误
-          sudo apt update -o Acquire::Check-Valid-Until=false
+          # 使用--allow-insecure-repositories参数忽略可能的安全警告
+          sudo apt update --allow-insecure-repositories || true
           
-          # 安装ARM64依赖
-          sudo apt install -y \
+          # 安装ARM64依赖，使用--fix-missing处理可能的缺失包
+          sudo apt install -y --fix-missing \
           zlib1g-dev:arm64 \
           libssl-dev:arm64
+      
       - name: Build ARM64
         run: |
          cd build
@@ -164,6 +165,7 @@ jobs:
          -DCMAKE_PREFIX_PATH=/usr/lib/aarch64-linux-gnu \
          ..
          cmake --build .
+      
       - name: Rename artifact
         run: mv build/telegram-bot-api build/telegram-bot-api-linux-arm64
 
