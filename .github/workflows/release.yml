@@ -137,6 +137,8 @@ jobs:
       
       - name: Update package list and install target (ARM64) dependencies
         run: |
+          sudo sed -i '/jammy-security/d' /etc/apt/sources.list
+          sudo find /etc/apt/sources.list.d/ -name "*.list" -exec sed -i '/jammy-security/d' {} \;
           sudo apt clean
           sudo rm -rf /var/lib/apt/lists/*
           sudo apt update
