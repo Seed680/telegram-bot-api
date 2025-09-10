@@ -104,22 +104,18 @@ jobs:
           mkdir -p build
           mkdir -p build-native
       
-      - name: Prepare for cross-compilation (if needed)
+      - name: Prepare for cross-compilation
         run: |
           cd build-native
           cmake -DCMAKE_BUILD_TYPE=Release ..
           cmake --build . --target prepare_cross_compiling
       
-      - name: Add ARM64 architecture and manually configure sources
+      - name: Add ARM64 architecture and configure sources
         run: |
           # 添加 arm64 架构
           sudo dpkg --add-architecture arm64
-          cat /etc/apt/sources.list
-          ls /etc/apt/sources.list.d/
-          # 手动创建 ARM64 源文件，完全复制 Dockerfile 的操作
-          # 使用 tee 命令和 sudo 来写入受保护的系统目录
-          # --- 新的、更稳健的添加源的方法 ---
-          # 将 ARM64 源的内容写入一个临时文件
+          
+          # 为ARM64配置正确的源，移除jammy-security
           cat > /tmp/ubuntu-arm64.sources << 'INNER_EOF'
           Types: deb
           URIs: http://ports.ubuntu.com/ubuntu-ports/
@@ -128,19 +124,11 @@ jobs:
           Architectures: arm64
           Signed-By: /usr/share/keyrings/ubuntu-archive-keyring.gpg
           INNER_EOF
-
-          # 使用 sudo 将临时文件移动到 /etc/apt/sources.list.d/ 目录
-          # 这会创建或覆盖 ubuntu.sources 文件
           
-          sudo mv /tmp/ubuntu-arm64.sources /etc/apt/sources.list.d/ubuntu.sources
-          # --- 源添加完毕 ---
+          sudo mv /tmp/ubuntu-arm64.sources /etc/apt/sources.list.d/ubuntu-arm64.sources
       
       - name: Update package list and install target (ARM64) dependencies
         run: |
-          sudo sed -i '/jammy-security/d' /etc/apt/sources.list
-          sudo find /etc/apt/sources.list.d/ -name "*.list" -exec sed -i '/jammy-security/d' {} \;
-          sudo apt clean
-          sudo rm -rf /var/lib/apt/lists/*
           sudo apt update
           sudo apt install -y \
           zlib1g-dev:arm64 \
@@ -148,7 +136,6 @@ jobs:
       - name: Build ARM64
         run: |
          cd build
-         # 运行 CMake 配置，使用 CMAKE_PREFIX_PATH 指定 ARM64 库的根路径
          cmake \
          -DCMAKE_BUILD_TYPE=Release \
          -DCMAKE_SYSTEM_NAME=Linux \
@@ -157,7 +144,6 @@ jobs:
          -DCMAKE_CXX_COMPILER=aarch64-linux-gnu-g++ \
          -DCMAKE_PREFIX_PATH=/usr/lib/aarch64-linux-gnu \
          ..
-         # 开始编译
          cmake --build .
       - name: Rename artifact
         run: mv build/telegram-bot-api build/telegram-bot-api-linux-arm64
