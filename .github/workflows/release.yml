@@ -1,4 +1,5 @@
-name: Build Linux x86_64 and ARM64 (Alpine)
+name: Build Linux x86_64 and ARM64
+
 on:
   push:
     branches: [main, master]
@@ -11,7 +12,7 @@ on:
 jobs:
   setup-release-info:
     name: Setup Release Info
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     outputs:
       release-version: ${{ steps.version.outputs.version }}
       release-tag-name: ${{ steps.tag.outputs.tag-name }}
@@ -33,7 +34,6 @@ jobs:
           else
             echo "tag-name=manual-${{ github.run_number }}" >> $GITHUB_OUTPUT
           fi
-
       - name: Determine Release Title
         id: title
         run: |
@@ -42,7 +42,6 @@ jobs:
           else
             echo "title=manual-${{ github.run_number }}" >> $GITHUB_OUTPUT
           fi
-
       - name: Determine Prerelease
         id: prerelease
         run: |
@@ -51,10 +50,9 @@ jobs:
           else
             echo "prerelease=true" >> $GITHUB_OUTPUT
           fi
-
   build-x86_64:
-    name: Build for Linux x86_64 (Alpine)
-    runs-on: alpine-latest
+    name: Build for Linux x86_64
+    runs-on: ubuntu-22.04
     steps:
       - name: Checkout repository
         uses: actions/checkout@v3
@@ -63,15 +61,14 @@ jobs:
 
       - name: Install dependencies
         run: |
-          sudo apk add --no-cache cmake g++ make gperf zlib-dev openssl-dev
-
+          sudo apt-get update
+          sudo apt-get install -y cmake g++ make gperf zlib1g-dev libssl-dev
       - name: Build x86_64
         run: |
           mkdir -p build
           cd build
-          cmake -DCMAKE_BUILD_TYPE=Release -DBUILD_SHARED_LIBS=OFF ..
+          cmake -DCMAKE_BUILD_TYPE=Release ..
           cmake --build . --target install
-
       - name: Rename artifact
         run: mv build/telegram-bot-api build/telegram-bot-api-linux-x86_64
 
@@ -82,8 +79,8 @@ jobs:
           path: build/telegram-bot-api-linux-x86_64
 
   build-arm64:
-    name: Build for Linux ARM64 (Alpine)
-    runs-on: alpine-latest
+    name: Build for Linux ARM64
+    runs-on: ubuntu-22.04
     steps:
       - name: Checkout repository
         uses: actions/checkout@v3
@@ -92,46 +89,70 @@ jobs:
 
       - name: Install cross-compilation dependencies
         run: |
-          sudo apk add --no-cache \
-            build-base \
-            cmake \
-            gcc-aarch64-alpine-linux-musl \
-            g++-aarch64-alpine-linux-musl \
-            git \
-            gperf \
-            zlib-dev \
-            openssl-dev \
-            zlib-static \
-            openssl-static
-
+          sudo apt update
+          sudo apt install -y \
+          build-essential \
+          cmake \
+          gcc-aarch64-linux-gnu \
+          g++-aarch64-linux-gnu \
+          git \
+          gperf \
+          zlib1g-dev \
+          libssl-dev
       - name: Create build directories
         run: |
           mkdir -p build
           mkdir -p build-native
-
-      - name: Prepare for cross-compilation
+      
+      - name: Prepare for cross-compilation (if needed)
         run: |
           cd build-native
-          cmake -DCMAKE_BUILD_TYPE=Release -DBUILD_SHARED_LIBS=OFF ..
+          cmake -DCMAKE_BUILD_TYPE=Release ..
           cmake --build . --target prepare_cross_compiling
+      
+      - name: Add ARM64 architecture and manually configure sources
+        run: |
+          # 添加 arm64 架构
+          sudo dpkg --add-architecture arm64
+      
+          # 手动创建 ARM64 源文件，完全复制 Dockerfile 的操作
+          # 使用 tee 命令和 sudo 来写入受保护的系统目录
+          # --- 新的、更稳健的添加源的方法 ---
+          # 将 ARM64 源的内容写入一个临时文件
+          cat > /tmp/ubuntu-arm64.sources << 'INNER_EOF'
+          Types: deb
+          URIs: http://ports.ubuntu.com/ubuntu-ports/
+          Suites: jammy jammy-updates jammy-backports jammy-security
+          Components: main universe restricted multiverse
+          Architectures: arm64
+          Signed-By: /usr/share/keyrings/ubuntu-archive-keyring.gpg
+          INNER_EOF
 
+          # 使用 sudo 将临时文件移动到 /etc/apt/sources.list.d/ 目录
+          # 这会创建或覆盖 ubuntu.sources 文件
+          sudo mv /tmp/ubuntu-arm64.sources /etc/apt/sources.list.d/ubuntu.sources
+          # --- 源添加完毕 ---
+      
+      - name: Update package list and install target (ARM64) dependencies
+        run: |
+          sudo apt update
+          sudo apt install -y \
+          zlib1g-dev:arm64 \
+          libssl-dev:arm64
       - name: Build ARM64
         run: |
-          cd build
-          cmake \
-            -DCMAKE_BUILD_TYPE=Release \
-            -DCMAKE_SYSTEM_NAME=Linux \
-            -DCMAKE_CROSSCOMPILING=True \
-            -DCMAKE_C_COMPILER=aarch64-alpine-linux-musl-gcc \
-            -DCMAKE_CXX_COMPILER=aarch64-alpine-linux-musl-g++ \
-            -DCMAKE_FIND_ROOT_PATH=/usr/aarch64-alpine-linux-musl \
-            -DCMAKE_PREFIX_PATH=/usr/aarch64-alpine-linux-musl \
-            -DCMAKE_EXE_LINKER_FLAGS="-static" \
-            -DCMAKE_SHARED_LINKER_FLAGS="-static" \
-            -DBUILD_SHARED_LIBS=OFF \
-            ..
-          cmake --build . --target install
-
+         cd build
+         # 运行 CMake 配置，使用 CMAKE_PREFIX_PATH 指定 ARM64 库的根路径
+         cmake \
+         -DCMAKE_BUILD_TYPE=Release \
+         -DCMAKE_SYSTEM_NAME=Linux \
+         -DCMAKE_CROSSCOMPILING=True \
+         -DCMAKE_C_COMPILER=aarch64-linux-gnu-gcc \
+         -DCMAKE_CXX_COMPILER=aarch64-linux-gnu-g++ \
+         -DCMAKE_PREFIX_PATH=/usr/lib/aarch64-linux-gnu \
+         ..
+         # 开始编译
+         cmake --build .
       - name: Rename artifact
         run: mv build/telegram-bot-api build/telegram-bot-api-linux-arm64
 
