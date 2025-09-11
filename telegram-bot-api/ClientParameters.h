@@ -117,6 +117,15 @@ struct ClientParameters {
   td::int32 default_max_webhook_connections_ = 0;
   td::IPAddress webhook_proxy_ip_address_;
 
+  // TDLib proxy settings
+  enum class ProxyType { None, Socks5, Http, Mtproto };
+  ProxyType proxy_type_ = ProxyType::None;
+  td::string proxy_server_;
+  td::int32 proxy_port_ = 0;
+  td::string proxy_username_;
+  td::string proxy_password_;
+  td::string proxy_secret_;  // For Mtproto proxy
+
   double start_time_ = 0;
 
   td::ActorId<td::GetHostByNameActor> get_host_by_name_actor_id_;

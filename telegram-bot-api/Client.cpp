@@ -8095,7 +8095,28 @@ void Client::on_update_authorization_state() {
       request->device_model_ = "server";
       request->application_version_ = parameters_->version_;
 
-      return send_request(std::move(request), td::make_unique<TdOnInitCallback>(this));
+      // Configure TDLib proxy if specified
+      if (parameters_->proxy_type_ != ClientParameters::ProxyType::None) {
+        switch (parameters_->proxy_type_) {
+          case ClientParameters::ProxyType::Socks5:
+            request->proxy_ = make_object<td_api::proxyTypeSocks5>(parameters_->proxy_username_, parameters_->proxy_password_);
+            break;
+          case ClientParameters::ProxyType::Http:
+            // For HTTP proxy, we use http_only = false to support both HTTP and TCP connections
+            request->proxy_ = make_object<td_api::proxyTypeHttp>(parameters_->proxy_username_, parameters_->proxy_password_, false);
+            break;
+          case ClientParameters::ProxyType::Mtproto:
+            request->proxy_ = make_object<td_api::proxyTypeMtproto>(parameters_->proxy_secret_);
+            break;
+          case ClientParameters::ProxyType::None:
+            // No proxy
+            break;
+        }
+        request->proxy_server_ = parameters_->proxy_server_;
+        request->proxy_port_ = parameters_->proxy_port_;
+      }
+
+      return send_request(std::move(request), td::make_unique<TdOnOkCallback>());
     }
     case td_api::authorizationStateWaitPhoneNumber::ID:
       send_request(make_object<td_api::setOption>("online", make_object<td_api::optionValueBoolean>(true)),
