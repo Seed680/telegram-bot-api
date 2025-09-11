@@ -298,51 +298,51 @@ int main(int argc, char *argv[]) {
                                }
                                return parameters->webhook_proxy_ip_address_.init_host_port(address.str());
                              });
-  
+
   // TDLib proxy options
-  options.add_option('\0', "tdlib-proxy-type",
-                     "Type of TDLib proxy (SOCKS5, HTTP, or MTPROTO)",
-                     [&](td::Slice type) {
-                       auto type_lower = td::to_lower(type.str());
-                       if (type_lower == "socks5") {
-                         parameters->proxy_type_ = ClientParameters::ProxyType::Socks5;
-                       } else if (type_lower == "http") {
-                         parameters->proxy_type_ = ClientParameters::ProxyType::Http;
-                       } else if (type_lower == "mtproto") {
-                         parameters->proxy_type_ = ClientParameters::ProxyType::Mtproto;
-                       } else {
-                         return td::Status::Error("Unsupported TDLib proxy type specified");
-                       }
-                       return td::Status::OK();
-                     });
-  
+  options.add_checked_option('\0', "tdlib-proxy-type",
+                             "Type of TDLib proxy (SOCKS5, HTTP, or MTPROTO)",
+                             [&](td::Slice type) {
+                               auto type_lower = td::to_lower(type.str());
+                               if (type_lower == "socks5") {
+                                 parameters->proxy_type_ = ClientParameters::ProxyType::Socks5;
+                               } else if (type_lower == "http") {
+                                 parameters->proxy_type_ = ClientParameters::ProxyType::Http;
+                               } else if (type_lower == "mtproto") {
+                                 parameters->proxy_type_ = ClientParameters::ProxyType::Mtproto;
+                               } else {
+                                 return td::Status::Error("Unsupported TDLib proxy type specified");
+                               }
+                               return td::Status::OK();
+                             });
+
   options.add_option('\0', "proxy-server",
                      "Server address of the TDLib proxy",
                      td::OptionParser::parse_string(parameters->proxy_server_));
-  
+
   options.add_checked_option('\0', "proxy-port",
                              "Port of the TDLib proxy",
                              td::OptionParser::parse_integer(parameters->proxy_port_));
-  
+
   options.add_option('\0', "proxy-login",
                      "Username for the TDLib proxy",
                      td::OptionParser::parse_string(parameters->proxy_username_));
-  
+
   options.add_option('\0', "proxy-password",
                      "Password for the TDLib proxy",
                      td::OptionParser::parse_string(parameters->proxy_password_));
-  
+
   options.add_option('\0', "proxy-secret",
                      "Secret for the TDLib MTProto proxy",
                      td::OptionParser::parse_string(parameters->proxy_secret_));
-  
+
   options.add_check([&] {
     if (parameters->api_id_ <= 0 || parameters->api_hash_.empty()) {
       return td::Status::Error("You must provide valid api-id and api-hash obtained at https://my.telegram.org");
     }
     return td::Status::OK();
   });
-  
+
   options.add_check([&] {
     // Validate TDLib proxy settings
     if (parameters->proxy_type_ != ClientParameters::ProxyType::None) {
