@@ -8100,7 +8100,7 @@ void Client::on_update_authorization_state() {
         if (proxy_type != nullptr) {
           send_request(make_object<td_api::addProxy>(parameters_->proxy_server_, parameters_->proxy_port_, true, 
                                                      std::move(proxy_type)),
-                       make_unique<TdOnOkCallback>());
+                       td::make_unique<TdOnOkCallback>());
         }
       }
 
